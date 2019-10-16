@@ -1,7 +1,8 @@
-# About
+# Hello
 
 Application for the AceleraDev Challenge
 
-## Info
+## About
 
-Developed by Maiara Martins (Galaxyware) for AcerelaDev React 2019 Challenge
+Developed by Maiara Martins (Galaxyware) for AcerelaDev React 2019 Challenge.
+Using Flutter (Dart) for development
