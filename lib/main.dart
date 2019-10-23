@@ -1,19 +1,21 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 
+import 'package:acelera_dev/SaveFile.dart';
 import 'package:acelera_dev/model/Crypto.dart';
+import 'package:async_loader/async_loader.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:numberpicker/numberpicker.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart'; //add path provider dart plugin on pubspec.yaml file
 import 'package:spinner_input/spinner_input.dart';
-import 'package:crypto/crypto.dart';
-import 'package:dio/dio.dart';
-
 
 import 'Api.dart';
 
-void main() => runApp(MaterialApp(
+void main() =>
+    runApp(MaterialApp(
       home: Home(),
     ));
 
@@ -23,93 +25,88 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  bool _enable = true;
-  double _spinner = 1;
-  int _number = 1;
-  bool _visible = false;
-  Crypto _post;
-  TextEditingController _typedText = TextEditingController();
-  String _encrypted = "";
-  String _deciphered = "";
-  String _sha = "";
+  //True = descriptografa , False = Criptografica
+  bool _choiceDeciphered = true;
+  bool _getApi = false;
+  bool _boo = false;
 
+  //Numero de casas que sera aplicada
+  double _numberHouse = 1;
+  TextEditingController _typedText = TextEditingController();
+  bool _visible = false;
+  Crypto _crypto = Crypto(numeroCasas: 1,
+      codigo: "",
+      decifrado: "",
+      resumoCriptografico: "",
+      token: TOKEN);
+
+  SaveFile saveFile = SaveFile();
+  Api api = Api();
+
+  @override
+  void initState() {
+    super.initState();
+    /*to store files temporary we use getTemporaryDirectory() but we need
+    permanent storage so we use getApplicationDocumentsDirectory() */
+    getApplicationDocumentsDirectory().then((Directory directory) {
+      saveFile.dir = directory;
+      saveFile.jsonFile = new File(saveFile.dir.path + "/" + saveFile.fileName);
+      saveFile.fileExists = saveFile.jsonFile.existsSync();
+      if (saveFile.fileExists)
+        this.setState(
+                () =>
+            saveFile.fileContent =
+                json.decode(saveFile.jsonFile.readAsStringSync()));
+    });
+  }
+
+
+  /*
+   * Desifra e codifica o texto
+   */
   _start(String text, int numeroCasas, {Crypto crypto}) {
-    List<int> texto = List<int>();
+    List<int> result = List<int>();
     for (int a in text.runes.toList()) {
       if (a >= 97 && a <= 122) {
-        if (_enable) {
+        if (_choiceDeciphered || _getApi) {
           if (a - numeroCasas < 97) {
-            int casas = 97 - numeroCasas;
-            casas = 122 - (97 - casas);
-            texto.add(casas);
+            int casas = 123 - (97 - (a - numeroCasas));
+            result.add(casas);
             continue;
           } else {
-            print("codigo : $a");
-            texto.add(a - numeroCasas);
+            result.add(a - numeroCasas);
             continue;
           }
         } else {
           if (a + numeroCasas > 122) {
-            int casas = 122 + numeroCasas;
-            casas = 97 + (casas - 122);
-            texto.add(casas);
+            int casas = 98 + ((a + numeroCasas) - 122);
+            result.add(casas);
             continue;
           } else {
-            print("codigo : $a");
-            texto.add(a + numeroCasas);
+            result.add(a + numeroCasas);
             continue;
           }
         }
       }
-      texto.add(a);
+      result.add(a);
     }
-    crypto.decifrado =  String.fromCharCodes(Uint8List.fromList(texto));
-    crypto.resumoCriptografico = sha1.convert(Uint8List.fromList(texto)).toString();
 
     setState(() {
-      _post = crypto;
-      if(_enable){
-        _deciphered = String.fromCharCodes(Uint8List.fromList(texto));
-        _encrypted = text;
-      }else{
-        _encrypted = String.fromCharCodes(Uint8List.fromList(texto));
-        _deciphered = text;
+      _visible = true;
+      _boo = false;
+      if (_choiceDeciphered || _getApi) {
+        _crypto.decifrado = String.fromCharCodes(Uint8List.fromList(result));
+        _crypto.codigo = text;
+      } else {
+        _crypto.decifrado = text;
+        _crypto.codigo = String.fromCharCodes(Uint8List.fromList(result));
       }
-      _number = numeroCasas;
-      _sha = sha1.convert(Uint8List.fromList(texto)).toString();
-      print(_deciphered);
-      print(_encrypted);
+      _crypto.numeroCasas = numeroCasas;
+      _crypto.resumoCriptografico =
+          sha1.convert(Uint8List.fromList(result)).toString();
     });
   }
 
-  _requestApi() async {
-    http.Response response = await http.get(
-      URL + "?token=" + TOKEN,
-    );
-
-    if (response.statusCode == 200) {
-      Map<String, dynamic> result = json.decode(response.body);
-      Crypto crypto = Crypto(
-        numeroCasas: result["numero_casas"],
-        token: result["token"],
-        codigo: result["cifrado"],
-        decifrado: result["decifrado"],
-        resumoCriptografico: result["resumo_criptografico"],
-      );
-      setState(() {
-        _enable = true;
-      });
-      _start(crypto.codigo, crypto.numeroCasas, crypto: crypto);
-    }
-
-    FormData formData = FormData.from({
-      "name": "wendux",
-      "age": 25,
-      "file": await MultipartFile.fromFile("./text.txt",filename: "upload.txt")
-    });
-    response = await dio.post("/info", data: formData);
-
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,9 +129,9 @@ class _HomeState extends State<Home> {
                   style: TextStyle(color: Colors.black, fontSize: 20),
                 ),
                 SpinnerInput(
-                    spinnerValue: _spinner,
+                    spinnerValue: _numberHouse,
                     middleNumberStyle:
-                        TextStyle(color: Colors.blue, fontSize: 20),
+                    TextStyle(color: Colors.blue, fontSize: 20),
                     minusButton: SpinnerButtonStyle(
                         elevation: 5,
                         color: Colors.blueGrey,
@@ -148,25 +145,25 @@ class _HomeState extends State<Home> {
                     maxValue: 10,
                     onChange: (newValue) {
                       setState(() {
-                        _spinner = newValue;
+                        _numberHouse = newValue;
                       });
                     }),
               ],
             ),
             ListTile(
                 title: TextField(
-              controller: _typedText,
-              decoration: InputDecoration(labelText: "Digite o código"),
-            )),
+                  controller: _typedText,
+                  decoration: InputDecoration(labelText: "Digite o código"),
+                )),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: <Widget>[
                 Text("Cripotografar"),
                 Switch(
-                  value: _enable,
+                  value: _choiceDeciphered,
                   onChanged: (bool value) {
                     setState(() {
-                      _enable = value;
+                      _choiceDeciphered = value;
                     });
                   },
                   //activeThumbImage: new NetworkImage('https://lists.gnu.org/archive/html/emacs-devel/2015-10/pngR9b4lzUy39.png'),
@@ -184,9 +181,9 @@ class _HomeState extends State<Home> {
                 children: <Widget>[
                   RaisedButton(
                     onPressed: () {
-                      _start(_typedText.text, _spinner.toInt());
+                      _start(_typedText.text, _numberHouse.toInt());
                       setState(() {
-                        _visible = true;
+                        _getApi = false;
                       });
                     },
                     child: Text("Descripografar"),
@@ -197,10 +194,14 @@ class _HomeState extends State<Home> {
                   Text("Ou"),
                   RaisedButton(
                     onPressed: () {
-                      _requestApi();
                       setState(() {
-                        _visible = true;
+                        _getApi = true;
+                        _boo = true;
                       });
+
+                      api.get().then((result){
+                        _start(result.codigo, result.numeroCasas.toInt());
+                     });
                     },
                     child: Text("Buscar na API"),
                     elevation: 10,
@@ -211,12 +212,18 @@ class _HomeState extends State<Home> {
               ),
             ),
             Visibility(
+              visible: _boo,
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            Visibility(
               visible: _visible,
               child: ListTile(
                 leading: Icon(Icons.filter_2),
                 title: Text('Número de Casas'),
                 subtitle: Text(
-                  _number.toString(),
+                  _crypto.numeroCasas.toString(),
                   style: TextStyle(color: Colors.green, fontSize: 18),
                 ),
               ),
@@ -227,7 +234,7 @@ class _HomeState extends State<Home> {
                 leading: Icon(Icons.enhanced_encryption),
                 title: Text('Código:'),
                 subtitle: Text(
-                  _encrypted,
+                  _crypto.codigo,
                   style: TextStyle(color: Colors.green, fontSize: 18),
                 ),
               ),
@@ -240,7 +247,7 @@ class _HomeState extends State<Home> {
                   'Decifrado:',
                 ),
                 subtitle: Text(
-                  _deciphered,
+                  _crypto.decifrado,
                   style: TextStyle(color: Colors.green, fontSize: 18),
                 ),
               ),
@@ -251,7 +258,7 @@ class _HomeState extends State<Home> {
                 leading: Icon(Icons.text_fields),
                 title: Text('SHA1'),
                 subtitle: Text(
-                  _sha,
+                  _crypto.resumoCriptografico,
                   style: TextStyle(color: Colors.green, fontSize: 18),
                 ),
               ),
@@ -262,8 +269,7 @@ class _HomeState extends State<Home> {
                   padding: EdgeInsets.only(top: 30),
                   child: RaisedButton(
                     onPressed: () {
-                      Api api = Api();
-                      api.post(_post);
+                      saveFile.writeToFile(_crypto.toJson());
                     },
                     child: Text(
                       "Enviar para API",
