@@ -25,7 +25,7 @@ class SaveFile{
     print("Writing to file!");
     if (fileExists) {
       print("File exists");
-      Map<String, dynamic> jsonFileContent =
+      Map<String, dynamic> jsonFileContent = new Map();
       json.decode(jsonFile.readAsStringSync());
       jsonFileContent.addAll(content);
       jsonFile.writeAsStringSync(json.encode(jsonFileContent));
@@ -35,8 +35,7 @@ class SaveFile{
     }
 
     print(fileContent);
-    Api api = Api();
-    api.post(jsonFile, dir);
+    return true;
   }
 
 }

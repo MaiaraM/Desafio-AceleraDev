@@ -13,11 +13,9 @@ const GET = 'https://api.codenation.dev/v1/challenge/dev-ps/generate-data';
 const POST = 'https://api.codenation.dev/v1/challenge/dev-ps/submit-solution';
 
 
-class Api{
+class Api {
 
   Future<Crypto> get() async {
-
-
     http.Response response = await http.get(
       "$GET?token=$TOKEN",
     );
@@ -48,16 +46,17 @@ class Api{
       ),
     });
 
-    Response a = await dio.post(
-        "$POST?token=$TOKEN" ,
-        data: formData,
-        options: new Options(
-            contentType: "multipart/form-data"
-        ));
+    try {
+      Response response = await dio.post(
+          "$POST?token=$TOKEN",
+          data: formData,
+          options: new Options(
+              contentType: "multipart/form-data"
+          ));
 
-    print(a);
-
-
+      return "${response.statusMessage}:  ${response.data.toString()}";
+    } on DioError catch (e) {
+      return e.response.statusMessage;
+    }
   }
-
-}
+  }

@@ -4,11 +4,10 @@ import 'dart:typed_data';
 
 import 'package:acelera_dev/SaveFile.dart';
 import 'package:acelera_dev/model/Crypto.dart';
-import 'package:async_loader/async_loader.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
+import 'package:http/http.dart';
 import 'package:path_provider/path_provider.dart'; //add path provider dart plugin on pubspec.yaml file
 import 'package:spinner_input/spinner_input.dart';
 
@@ -16,6 +15,7 @@ import 'Api.dart';
 
 void main() =>
     runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Home(),
     ));
 
@@ -29,6 +29,7 @@ class _HomeState extends State<Home> {
   bool _choiceDeciphered = true;
   bool _getApi = false;
   bool _boo = false;
+  String response = "";
 
   //Numero de casas que sera aplicada
   double _numberHouse = 1;
@@ -269,7 +270,9 @@ class _HomeState extends State<Home> {
                   padding: EdgeInsets.only(top: 30),
                   child: RaisedButton(
                     onPressed: () {
-                      saveFile.writeToFile(_crypto.toJson());
+                      if(saveFile.writeToFile(_crypto.toJson())){
+                        _sendFile();
+                      }
                     },
                     child: Text(
                       "Enviar para API",
@@ -279,10 +282,30 @@ class _HomeState extends State<Home> {
                     color: Colors.indigo,
                     colorBrightness: Brightness.dark,
                   ),
-                ))
+                )),
+           Padding(
+             padding: EdgeInsets.all(20),
+             child:  Text(response,
+               textAlign: TextAlign.center,
+               style: TextStyle(
+                 color: Colors.black,
+                 fontSize: 25
+               ),
+             ),
+           )
           ],
         ),
       ),
     );
+  }
+
+  void _sendFile() async {
+    Api api = Api();
+    var a = await api.post(saveFile.jsonFile, saveFile.dir);
+
+
+    setState(() {
+      response =  a;
+    });
   }
 }
