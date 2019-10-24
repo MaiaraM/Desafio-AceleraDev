@@ -80,7 +80,7 @@ class _HomeState extends State<Home> {
           }
         } else {
           if (a + numeroCasas > 122) {
-            int casas = 98 + ((a + numeroCasas) - 122);
+            int casas = 96 + ((a + numeroCasas) - 122);
             result.add(casas);
             continue;
           } else {
