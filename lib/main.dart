@@ -66,6 +66,7 @@ class _HomeState extends State<Home> {
    * Desifra e codifica o texto
    */
   _start(String text, int numeroCasas, {Crypto crypto}) {
+    text = text.toLowerCase();
     List<int> result = List<int>();
     for (int a in text.runes.toList()) {
       if (a >= 97 && a <= 122) {
